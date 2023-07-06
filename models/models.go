@@ -293,6 +293,6 @@ type CallbackQuery struct {
 }
 
 type ChatAction struct {
-	ChatID int64  `json:"id"`
+	ChatID int64  `json:"chat_id"`
 	Action string `json:"action"`
 }

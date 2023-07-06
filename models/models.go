@@ -291,3 +291,8 @@ type CallbackQuery struct {
 	// optional
 	GameShortName string `json:"game_short_name,omitempty"`
 }
+
+type ChatAction struct {
+	ChatID int64  `json:"id"`
+	Action string `json:"action"`
+}

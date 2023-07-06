@@ -70,6 +70,9 @@ func main() {
 	eventManager.RegisterHandler("message", &event.MessageHandler{
 		Bot: bot,
 	})
+	eventManager.RegisterHandler("chat_action", &event.ChatActionHandler{
+		Bot: bot,
+	})
 
 	unsubscriber, err := broker.Subscribe(ctx, outbox, func(ev *cloudevents.Event) error {
 		log.Printf("outbox event: %v\n", string(ev.Data()))

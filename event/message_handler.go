@@ -70,9 +70,17 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 			return err
 		}
 
-		msg := tgbotapi.NewVoice(payload.Chat.ID, tgbotapi.FilePath(file.Name()))
-		// msg := tgbotapi.NewVoice(payload.Chat.ID, tgbotapi.FileURL(payload.Voice.Url))
-		msg.ReplyToMessageID = payload.ReplyToMessageID
+		msg := tgbotapi.VoiceConfig{
+			BaseFile: tgbotapi.BaseFile{
+				BaseChat: tgbotapi.BaseChat{
+					ChatID:           payload.Chat.ID,
+					ReplyToMessageID: payload.ReplyToMessageID,
+				},
+				File: tgbotapi.FilePath(file.Name()),
+			},
+			Duration: payload.Voice.Duration,
+		}
+
 		_, err = h.Bot.API().Send(msg)
 	} else if payload.Video != nil {
 		msg := tgbotapi.NewVideo(payload.Chat.ID, tgbotapi.FileURL(payload.Video.Url))

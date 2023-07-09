@@ -42,7 +42,7 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 			}
 		}
 		msg.ReplyToMessageID = payload.ReplyToMessageID
-
+		msg.DisableNotification = payload.DisableNotification
 		_, err = h.Bot.API().Send(msg)
 		return err
 	} else if payload.Photo != nil {
@@ -55,6 +55,7 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 	} else if payload.Audio != nil {
 		msg := tgbotapi.NewAudio(payload.Chat.ID, tgbotapi.FileURL(payload.Audio.Url))
 		msg.ReplyToMessageID = payload.ReplyToMessageID
+		msg.DisableNotification = payload.DisableNotification
 		_, err = h.Bot.API().Send(msg)
 	} else if payload.Voice != nil {
 		resp, err := http.Get(payload.Voice.Url)
@@ -74,8 +75,9 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 		msg := tgbotapi.VoiceConfig{
 			BaseFile: tgbotapi.BaseFile{
 				BaseChat: tgbotapi.BaseChat{
-					ChatID:           payload.Chat.ID,
-					ReplyToMessageID: payload.ReplyToMessageID,
+					ChatID:              payload.Chat.ID,
+					ReplyToMessageID:    payload.ReplyToMessageID,
+					DisableNotification: payload.DisableNotification,
 				},
 				File: tgbotapi.FilePath(file.Name()),
 			},
@@ -86,6 +88,7 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 	} else if payload.Video != nil {
 		msg := tgbotapi.NewVideo(payload.Chat.ID, tgbotapi.FileURL(payload.Video.Url))
 		msg.ReplyToMessageID = payload.ReplyToMessageID
+		msg.DisableNotification = payload.DisableNotification
 		_, err = h.Bot.API().Send(msg)
 	} else if payload.Invoice != nil {
 		var prices []tgbotapi.LabeledPrice

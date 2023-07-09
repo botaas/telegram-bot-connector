@@ -163,6 +163,7 @@ type Invoice struct {
 type Message struct {
 	ID                   int                   `json:"id,omitempty"`
 	ReplyToMessageID     int                   `json:"reply_to_message_id,omitempty"`
+	DisableNotification  bool                  `json:"disable_notification"`
 	Chat                 *Chat                 `json:"chat,omitempty"`
 	Text                 string                `json:"text,omitempty"`
 	From                 *User                 `json:"from,omitempty"`

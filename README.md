@@ -11,11 +11,11 @@ docker build -t telegram-bot-connector .
 ### Docker run
 ```
 docker run \
-  -e TELEGRAM_BOT_TOKEN=[your token]
-  -e REDIS_ADDR [redis_addr]
-  -e REDIS_PASSWORD [redis_password_if_set]
-  -e INBOX tg_inbox_1
-  -e OUTBOX tg_outbox_1
+  -e TELEGRAM_BOT_TOKEN=[your token] \
+  -e REDIS_ADDR [redis_addr] \
+  -e REDIS_PASSWORD [redis_password_if_set] \
+  -e INBOX tg_inbox_1 \
+  -e OUTBOX tg_outbox_1 \
   telegram-bot-connector
 ```
 

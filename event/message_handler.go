@@ -49,6 +49,7 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 		for _, p := range payload.Photo {
 			msg := tgbotapi.NewPhoto(payload.Chat.ID, tgbotapi.FileURL(p.Url))
 			msg.ReplyToMessageID = payload.ReplyToMessageID
+			msg.DisableNotification = payload.DisableNotification
 			_, err = h.Bot.API().Send(msg)
 		}
 	} else if payload.Audio != nil {

@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telegram-bot-connector-deployment
+spec:
+  selector:
+    matchLabels:
+      app: telegram-bot-connector
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: telegram-bot-connector
+    spec:
+      containers:
+      - name: telegram-bot-connector
+        image: autokit/telegram-bot-connector:0.0.1
+        ports:
+        - containerPort: 80

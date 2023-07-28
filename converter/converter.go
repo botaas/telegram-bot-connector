@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"os/exec"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/botaas/telegram-bot-connector/models"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -189,6 +190,22 @@ func NormalizeTelegramMessage(bot *tgbotapi.BotAPI, m *tgbotapi.Message) (*model
 			FileSize: m.Voice.FileSize,
 		}
 		o.Voice = voice
+	}
+
+	if m.Video != nil {
+		url, err := bot.GetFileDirectURL(m.Video.FileID)
+		if err != nil {
+			return nil, err
+		}
+
+		video := &models.Video{
+			Url:      url,
+			FileID:   m.Video.FileID,
+			Duration: m.Video.Duration,
+			MimeType: m.Video.MimeType,
+			FileSize: m.Video.FileSize,
+		}
+		o.Video = video
 	}
 
 	if m.SuccessfulPayment != nil {

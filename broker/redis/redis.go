@@ -3,7 +3,8 @@ package redis
 import (
 	"context"
 	"fmt"
-	"log"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/botaas/telegram-bot-connector/broker"
 	cloudevents "github.com/cloudevents/sdk-go/v2"

@@ -127,6 +127,52 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 		msg.ReplyToMessageID = payload.ReplyToMessageID
 		msg.ProtectContent = payload.ProtectContent
 		_, err = h.Bot.API().Send(msg)
+	} else if payload.MediaGroup != nil {
+
+		files := []any{}
+
+		for _, f := range payload.MediaGroup.Files {
+			var media models.BaseInputMedia
+			err := mapstructure.Decode(f, &media)
+			if err != nil {
+				continue
+			}
+
+			switch media.Type {
+			case "photo":
+				photo := tgbotapi.NewInputMediaPhoto(
+					tgbotapi.FileURL(media.Media),
+				)
+				files = append(files, photo)
+			case "audio":
+				audio := tgbotapi.NewInputMediaAudio(
+					tgbotapi.FileURL(media.Media),
+				)
+				files = append(files, audio)
+			case "video":
+				video := tgbotapi.NewInputMediaVideo(
+					tgbotapi.FileURL(media.Media),
+				)
+				files = append(files, video)
+			case "animation":
+				animation := tgbotapi.NewInputMediaAnimation(
+					tgbotapi.FileURL(media.Media),
+				)
+				files = append(files, animation)
+			case "document":
+				document := tgbotapi.NewInputMediaDocument(
+					tgbotapi.FileURL(media.Media),
+				)
+				files = append(files, document)
+			}
+		}
+
+		mediaGroup := tgbotapi.NewMediaGroup(
+			payload.Chat.ID,
+			files,
+		)
+
+		_, err = h.Bot.API().Send(mediaGroup)
 	}
 
 	return err

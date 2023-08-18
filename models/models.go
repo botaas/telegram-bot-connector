@@ -174,6 +174,7 @@ type Message struct {
 	Voice                *Voice                `json:"voice,omitempty"`
 	Video                *Video                `json:"video,omitempty"`
 	Invoice              *Invoice              `json:"invoice,omitempty"`
+	MediaGroup           *MediaGroup           `json:"media_group,omitempty"`
 	SuccessfulPayment    *SuccessfulPayment    `json:"successful_payment,omitempty"`
 	InlineKeyboardMarkup *InlineKeyboardMarkup `json:"inline_keyboard_markup,omitempty"`
 }
@@ -297,4 +298,36 @@ type CallbackQuery struct {
 type ChatAction struct {
 	ChatID int64  `json:"chat_id"`
 	Action string `json:"action"`
+}
+
+type MediaGroup struct {
+	Files []any `json:"files"`
+}
+
+type BaseInputMedia struct {
+	// Type of the result.
+	Type string `json:"type"`
+	// Media file to send. Pass a file_id to send a file
+	// that exists on the Telegram servers (recommended),
+	// pass an HTTP URL for Telegram to get a file from the Internet,
+	// or pass “attach://<file_attach_name>” to upload a new one
+	// using multipart/form-data under <file_attach_name> name.
+	Media string `json:"media"`
+	// thumb intentionally missing as it is not currently compatible
+
+	// Caption of the video to be sent, 0-1024 characters after entities parsing.
+	//
+	// optional
+	Caption string `json:"caption,omitempty"`
+	// ParseMode mode for parsing entities in the video caption.
+	// See formatting options for more details
+	// (https://core.telegram.org/bots/api#formatting-options).
+	//
+	// optional
+	ParseMode string `json:"parse_mode,omitempty"`
+	// CaptionEntities is a list of special entities that appear in the caption,
+	// which can be specified instead of parse_mode
+	//
+	// optional
+	// CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
 }

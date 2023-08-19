@@ -41,3 +41,8 @@ You will use the token when working with the Bot API.
 
 
 refer: https://github.com/tingwei628/pgo/blob/5d8be8774c17fd6aee378cf670ebd79ddb2ca3a5/tgbotpay/tgbotpay.go
+
+
+
+# Reference
+https://github.com/status-im/matterbridge/blob/d0c6e9d614d7a465eba20138b84ee7a3785795c3/bridge/telegram/handlers.go

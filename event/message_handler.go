@@ -27,43 +27,51 @@ func marshalInlineKeyboardMarkup(i *models.InlineKeyboardMarkup) (tgbotapi.Inlin
 }
 
 func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) error {
-	var payload models.Message
-	err := json.Unmarshal(ev.Data(), &payload)
+	var cmsg models.Message
+	err := json.Unmarshal(ev.Data(), &cmsg)
 	if err != nil {
 		return err
 	}
 
-	if len(payload.Text) > 0 {
-		msg := tgbotapi.NewMessage(payload.Chat.ID, payload.Text)
-		if payload.InlineKeyboardMarkup != nil {
-			markup, err := marshalInlineKeyboardMarkup(payload.InlineKeyboardMarkup)
+	/*
+		username := ""
+		if cmsg.From != nil {
+			username = cmsg.From.UserName
+		}
+	*/
+
+	if len(cmsg.Text) > 0 {
+		msg := tgbotapi.NewMessage(cmsg.Chat.ID, cmsg.Text)
+		if cmsg.InlineKeyboardMarkup != nil {
+			markup, err := marshalInlineKeyboardMarkup(cmsg.InlineKeyboardMarkup)
 			if err == nil {
 				msg.ReplyMarkup = markup
 			}
 		}
-		msg.ReplyToMessageID = payload.ReplyToMessageID
-		msg.DisableNotification = payload.DisableNotification
-		msg.ProtectContent = payload.ProtectContent
+
+		msg.ReplyToMessageID = cmsg.ReplyToMessageID
+		msg.DisableNotification = cmsg.DisableNotification
+		msg.ProtectContent = cmsg.ProtectContent
 		_, err = h.Bot.API().Send(msg)
 		return err
-	} else if payload.Photo != nil {
-		for _, p := range payload.Photo {
-			msg := tgbotapi.NewPhoto(payload.Chat.ID, tgbotapi.FileURL(p.Url))
-			msg.ReplyToMessageID = payload.ReplyToMessageID
-			msg.DisableNotification = payload.DisableNotification
-			msg.ProtectContent = payload.ProtectContent
+	} else if cmsg.Photo != nil {
+		for _, p := range cmsg.Photo {
+			msg := tgbotapi.NewPhoto(cmsg.Chat.ID, tgbotapi.FileURL(p.Url))
+			msg.ReplyToMessageID = cmsg.ReplyToMessageID
+			msg.DisableNotification = cmsg.DisableNotification
+			msg.ProtectContent = cmsg.ProtectContent
 
 			_, err = h.Bot.API().Send(msg)
 		}
-	} else if payload.Audio != nil {
-		msg := tgbotapi.NewAudio(payload.Chat.ID, tgbotapi.FileURL(payload.Audio.Url))
-		msg.ReplyToMessageID = payload.ReplyToMessageID
-		msg.DisableNotification = payload.DisableNotification
-		msg.ProtectContent = payload.ProtectContent
+	} else if cmsg.Audio != nil {
+		msg := tgbotapi.NewAudio(cmsg.Chat.ID, tgbotapi.FileURL(cmsg.Audio.Url))
+		msg.ReplyToMessageID = cmsg.ReplyToMessageID
+		msg.DisableNotification = cmsg.DisableNotification
+		msg.ProtectContent = cmsg.ProtectContent
 
 		_, err = h.Bot.API().Send(msg)
-	} else if payload.Voice != nil {
-		resp, err := http.Get(payload.Voice.Url)
+	} else if cmsg.Voice != nil {
+		resp, err := http.Get(cmsg.Voice.Url)
 		if err != nil {
 			return err
 		}
@@ -80,26 +88,26 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 		msg := tgbotapi.VoiceConfig{
 			BaseFile: tgbotapi.BaseFile{
 				BaseChat: tgbotapi.BaseChat{
-					ChatID:              payload.Chat.ID,
-					ReplyToMessageID:    payload.ReplyToMessageID,
-					DisableNotification: payload.DisableNotification,
-					ProtectContent:      payload.ProtectContent,
+					ChatID:              cmsg.Chat.ID,
+					ReplyToMessageID:    cmsg.ReplyToMessageID,
+					DisableNotification: cmsg.DisableNotification,
+					ProtectContent:      cmsg.ProtectContent,
 				},
 				File: tgbotapi.FilePath(file.Name()),
 			},
-			Duration: payload.Voice.Duration,
+			Duration: cmsg.Voice.Duration,
 		}
 
 		_, err = h.Bot.API().Send(msg)
-	} else if payload.Video != nil {
-		msg := tgbotapi.NewVideo(payload.Chat.ID, tgbotapi.FileURL(payload.Video.Url))
-		msg.ReplyToMessageID = payload.ReplyToMessageID
-		msg.DisableNotification = payload.DisableNotification
-		msg.ProtectContent = payload.ProtectContent
+	} else if cmsg.Video != nil {
+		msg := tgbotapi.NewVideo(cmsg.Chat.ID, tgbotapi.FileURL(cmsg.Video.Url))
+		msg.ReplyToMessageID = cmsg.ReplyToMessageID
+		msg.DisableNotification = cmsg.DisableNotification
+		msg.ProtectContent = cmsg.ProtectContent
 		_, err = h.Bot.API().Send(msg)
-	} else if payload.Invoice != nil {
+	} else if cmsg.Invoice != nil {
 		var prices []tgbotapi.LabeledPrice
-		for _, p := range payload.Invoice.Prices {
+		for _, p := range cmsg.Invoice.Prices {
 			price := tgbotapi.LabeledPrice{
 				Label:  p.Label,
 				Amount: p.Amount,
@@ -109,29 +117,28 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 		}
 
 		msg := tgbotapi.InvoiceConfig{
-			BaseChat:            tgbotapi.BaseChat{ChatID: payload.Chat.ID},
-			Title:               payload.Invoice.Title,
-			Description:         payload.Invoice.Description,
-			Payload:             payload.Invoice.Payload,
-			ProviderToken:       payload.Invoice.ProviderToken,
-			StartParameter:      payload.Invoice.StartParameter,
-			Currency:            payload.Invoice.Currency,
+			BaseChat:            tgbotapi.BaseChat{ChatID: cmsg.Chat.ID},
+			Title:               cmsg.Invoice.Title,
+			Description:         cmsg.Invoice.Description,
+			Payload:             cmsg.Invoice.Payload,
+			ProviderToken:       cmsg.Invoice.ProviderToken,
+			StartParameter:      cmsg.Invoice.StartParameter,
+			Currency:            cmsg.Invoice.Currency,
 			Prices:              prices,
-			MaxTipAmount:        payload.Invoice.MaxTipAmount,
-			SuggestedTipAmounts: payload.Invoice.SuggestedTipAmounts,
-			PhotoURL:            payload.Invoice.PhotoURL,
-			PhotoSize:           payload.Invoice.PhotoSize,
-			PhotoWidth:          payload.Invoice.PhotoWidth,
-			PhotoHeight:         payload.Invoice.PhotoHeight,
+			MaxTipAmount:        cmsg.Invoice.MaxTipAmount,
+			SuggestedTipAmounts: cmsg.Invoice.SuggestedTipAmounts,
+			PhotoURL:            cmsg.Invoice.PhotoURL,
+			PhotoSize:           cmsg.Invoice.PhotoSize,
+			PhotoWidth:          cmsg.Invoice.PhotoWidth,
+			PhotoHeight:         cmsg.Invoice.PhotoHeight,
 		}
-		msg.ReplyToMessageID = payload.ReplyToMessageID
-		msg.ProtectContent = payload.ProtectContent
+		msg.ReplyToMessageID = cmsg.ReplyToMessageID
+		msg.ProtectContent = cmsg.ProtectContent
 		_, err = h.Bot.API().Send(msg)
-	} else if payload.MediaGroup != nil {
-
+	} else if cmsg.MediaGroup != nil {
 		files := []any{}
 
-		for _, f := range payload.MediaGroup.Files {
+		for _, f := range cmsg.MediaGroup.Files {
 			var media models.BaseInputMedia
 			err := mapstructure.Decode(f, &media)
 			if err != nil {
@@ -163,12 +170,19 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 				document := tgbotapi.NewInputMediaDocument(
 					tgbotapi.FileURL(media.Media),
 				)
+
+				/*
+					document.Caption, document.ParseMode = bot.TGGetParseMode(h.Bot.API(), username, "")
+					if len(document.Caption) == 0 && len(document.ParseMode) == 0 {
+					}
+				*/
+
 				files = append(files, document)
 			}
 		}
 
 		mediaGroup := tgbotapi.NewMediaGroup(
-			payload.Chat.ID,
+			cmsg.Chat.ID,
 			files,
 		)
 

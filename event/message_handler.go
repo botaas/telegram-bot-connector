@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -14,6 +15,16 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/mitchellh/mapstructure"
 )
+
+func IsURL(str string) bool {
+	// 解析URL
+	u, err := url.Parse(str)
+	if err != nil {
+		return false
+	}
+
+	return u.Scheme != ""
+}
 
 type MessageHandler struct {
 	Bot *bot.Bot
@@ -56,7 +67,15 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 		return err
 	} else if cmsg.Photo != nil {
 		for _, p := range cmsg.Photo {
-			msg := tgbotapi.NewPhoto(cmsg.Chat.ID, tgbotapi.FileURL(p.Url))
+			var file tgbotapi.RequestFileData
+			if len(p.FileID) > 0 {
+				file = tgbotapi.FileID(p.FileID)
+			} else if len(p.Url) > 0 {
+				file = tgbotapi.FileURL(p.Url)
+			}
+
+			msg := tgbotapi.NewPhoto(cmsg.Chat.ID, file)
+
 			msg.ReplyToMessageID = cmsg.ReplyToMessageID
 			msg.DisableNotification = cmsg.DisableNotification
 			msg.ProtectContent = cmsg.ProtectContent
@@ -64,43 +83,57 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 			_, err = h.Bot.API().Send(msg)
 		}
 	} else if cmsg.Audio != nil {
-		msg := tgbotapi.NewAudio(cmsg.Chat.ID, tgbotapi.FileURL(cmsg.Audio.Url))
+		var file tgbotapi.RequestFileData
+		if len(cmsg.Audio.FileID) > 0 {
+			file = tgbotapi.FileID(cmsg.Audio.FileID)
+		} else if len(cmsg.Audio.Url) > 0 {
+			file = tgbotapi.FileURL(cmsg.Audio.Url)
+		}
+
+		msg := tgbotapi.NewAudio(cmsg.Chat.ID, file)
 		msg.ReplyToMessageID = cmsg.ReplyToMessageID
 		msg.DisableNotification = cmsg.DisableNotification
 		msg.ProtectContent = cmsg.ProtectContent
 
 		_, err = h.Bot.API().Send(msg)
 	} else if cmsg.Voice != nil {
-		resp, err := http.Get(cmsg.Voice.Url)
-		if err != nil {
-			return err
-		}
-		file, err := os.CreateTemp("", "download-*")
-		if err != nil {
-			return err
-		}
-		defer os.Remove(file.Name())
-		_, err = io.Copy(file, resp.Body)
-		if err != nil {
-			return err
+		var file tgbotapi.RequestFileData
+		if len(cmsg.Voice.FileID) > 0 {
+			file = tgbotapi.FileID(cmsg.Voice.FileID)
+		} else if len(cmsg.Voice.Url) > 0 {
+			resp, err := http.Get(cmsg.Voice.Url)
+			if err != nil {
+				return err
+			}
+			f, err := os.CreateTemp("", "download-*")
+			if err != nil {
+				return err
+			}
+			defer os.Remove(f.Name())
+			_, err = io.Copy(f, resp.Body)
+			if err != nil {
+				return err
+			}
+
+			file = tgbotapi.FilePath(f.Name())
 		}
 
-		msg := tgbotapi.VoiceConfig{
-			BaseFile: tgbotapi.BaseFile{
-				BaseChat: tgbotapi.BaseChat{
-					ChatID:              cmsg.Chat.ID,
-					ReplyToMessageID:    cmsg.ReplyToMessageID,
-					DisableNotification: cmsg.DisableNotification,
-					ProtectContent:      cmsg.ProtectContent,
-				},
-				File: tgbotapi.FilePath(file.Name()),
-			},
-			Duration: cmsg.Voice.Duration,
-		}
+		msg := tgbotapi.NewVoice(cmsg.Chat.ID, file)
+		msg.ReplyToMessageID = cmsg.ReplyToMessageID
+		msg.DisableNotification = cmsg.DisableNotification
+		msg.ProtectContent = cmsg.ProtectContent
+		msg.Duration = cmsg.Voice.Duration
 
 		_, err = h.Bot.API().Send(msg)
 	} else if cmsg.Video != nil {
-		msg := tgbotapi.NewVideo(cmsg.Chat.ID, tgbotapi.FileURL(cmsg.Video.Url))
+		var file tgbotapi.RequestFileData
+		if len(cmsg.Video.FileID) > 0 {
+			file = tgbotapi.FileID(cmsg.Video.FileID)
+		} else if len(cmsg.Video.Url) > 0 {
+			file = tgbotapi.FileURL(cmsg.Video.Url)
+		}
+
+		msg := tgbotapi.NewVideo(cmsg.Chat.ID, file)
 		msg.ReplyToMessageID = cmsg.ReplyToMessageID
 		msg.DisableNotification = cmsg.DisableNotification
 		msg.ProtectContent = cmsg.ProtectContent
@@ -145,30 +178,38 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 				continue
 			}
 
+			var requestFileData tgbotapi.RequestFileData
+			if IsURL(media.Media) {
+				requestFileData = tgbotapi.FileURL(media.Media)
+			} else {
+				requestFileData = tgbotapi.FileID(media.Media)
+			}
+
 			switch media.Type {
 			case "photo":
 				photo := tgbotapi.NewInputMediaPhoto(
-					tgbotapi.FileURL(media.Media),
+					requestFileData,
 				)
 				files = append(files, photo)
 			case "audio":
 				audio := tgbotapi.NewInputMediaAudio(
-					tgbotapi.FileURL(media.Media),
+					requestFileData,
 				)
 				files = append(files, audio)
 			case "video":
 				video := tgbotapi.NewInputMediaVideo(
-					tgbotapi.FileURL(media.Media),
+					requestFileData,
 				)
+
 				files = append(files, video)
 			case "animation":
 				animation := tgbotapi.NewInputMediaAnimation(
-					tgbotapi.FileURL(media.Media),
+					requestFileData,
 				)
 				files = append(files, animation)
 			case "document":
 				document := tgbotapi.NewInputMediaDocument(
-					tgbotapi.FileURL(media.Media),
+					requestFileData,
 				)
 
 				/*
@@ -186,7 +227,7 @@ func (h *MessageHandler) Handle(ctx context.Context, ev *cloudevents.Event) erro
 			files,
 		)
 
-		_, err = h.Bot.API().Send(mediaGroup)
+		_, err = h.Bot.API().SendMediaGroup(mediaGroup)
 	}
 
 	return err

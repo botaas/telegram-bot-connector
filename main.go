@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 	"time"
+
+	"golang.org/x/time/rate"
 
 	"github.com/botaas/telegram-bot-connector/bot"
 	"github.com/botaas/telegram-bot-connector/broker/redis"
@@ -54,6 +57,29 @@ func main() {
 		log.Fatal("token not provide")
 	}
 
+	var err error
+	var concurrency int
+	concurrencyStr, exist := os.LookupEnv("CONCURRENCY")
+	if !exist {
+		concurrency = 8
+	} else {
+		concurrency, err = strconv.Atoi(concurrencyStr)
+		if err != nil {
+			concurrency = 8
+		}
+	}
+
+	var ratelimit int
+	ratelimitStr, exist := os.LookupEnv("RATELIMIT")
+	if !exist {
+		ratelimit = 1000
+	} else {
+		ratelimit, err = strconv.Atoi(ratelimitStr)
+		if err != nil {
+			ratelimit = 1000
+		}
+	}
+
 	bot, err := bot.New(token, time.Duration(3*int(time.Second)))
 	if err != nil {
 		log.Fatalf("Couldn't start Telegram bot: %v", err)
@@ -78,9 +104,43 @@ func main() {
 		Bot: bot,
 	})
 
+	var outboxChans = make([]chan *cloudevents.Event, concurrency)
+	for i := 0; i < concurrency; i++ {
+		outboxChans[i] = make(chan *cloudevents.Event, 1)
+	}
+
+	for i := 0; i < concurrency; i++ {
+		ch := outboxChans[i]
+		go func(index int) {
+			for ev := range ch {
+				err := eventManager.Process(ctx, ev)
+				if err != nil {
+					log.WithFields(
+						log.Fields{
+							"chain": index,
+							"data":  string(ev.Data()),
+						},
+					).Error("Process outbox message error", err)
+				}
+			}
+		}(i)
+	}
+
+	limiter := rate.NewLimiter(rate.Every(time.Minute), ratelimit)
+
 	unsubscriber, err := broker.Subscribe(ctx, outbox, func(ev *cloudevents.Event) error {
 		log.Printf("outbox event: %v\n", string(ev.Data()))
-		return eventManager.Process(ctx, ev)
+
+		err := limiter.Wait(ctx)
+		if err != nil {
+			return err
+			// return errors.New(fmt.Sprintf("发送消息被限制: %v", err))
+		}
+
+		i := rand.Intn(concurrency)
+		outboxChans[i] <- ev
+
+		return nil
 	})
 
 	if err != nil {
@@ -95,14 +155,6 @@ func main() {
 	_, _ = bot.SetWebhook(webhookConfig)
 	updates = bot.ListenForWebhook("/" + bot.Token)
 	*/
-
-	var concurrency int
-	concurrencyStr, exist := os.LookupEnv("CONCURRENCY")
-	if !exist {
-		concurrency = 8
-	} else {
-		concurrency, err = strconv.Atoi(concurrencyStr)
-	}
 
 	var chans = make([]chan *tgbotapi.Update, concurrency)
 	for i := 0; i < concurrency; i++ {

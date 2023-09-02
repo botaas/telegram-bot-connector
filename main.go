@@ -126,7 +126,7 @@ func main() {
 		}(i)
 	}
 
-	limiter := rate.NewLimiter(rate.Every(time.Minute), ratelimit)
+	limiter := rate.NewLimiter(rate.Every(time.Minute/time.Duration(ratelimit)), ratelimit)
 
 	unsubscriber, err := broker.Subscribe(ctx, outbox, func(ev *cloudevents.Event) error {
 		log.Printf("outbox event: %v\n", string(ev.Data()))
